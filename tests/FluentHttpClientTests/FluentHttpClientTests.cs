@@ -5,7 +5,7 @@ namespace FluentHttpClientTests
     public class FluentHttpClientTests
     {
         [Fact]
-        public void WithBaseUrl_ClientShouldHaveBaseUrl()
+        public void WithBaseUrl_SetBaseUrl_ClientShouldHaveBaseUrl()
         {
             const string baseUrl = "Http://Chehre.net/";
 
@@ -16,7 +16,7 @@ namespace FluentHttpClientTests
         }
 
         [Fact]
-        public void WithBaseUrl_ClientShouldHaveTimeout()
+        public void WithBaseUrl_SetTimeout_ClientShouldHaveTimeout()
         {
             const int timeout = 10;
 
