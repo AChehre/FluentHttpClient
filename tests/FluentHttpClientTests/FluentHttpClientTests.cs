@@ -15,6 +15,7 @@ namespace FluentHttpClientTests
             Assert.Equal(baseUrl.ToLower(), fluentHttpClient.RawHttpClient.BaseAddress.AbsoluteUri.ToLower());
         }
 
+
         [Fact]
         public void WithBaseUrl_SetTimeout_ClientShouldHaveTimeout()
         {

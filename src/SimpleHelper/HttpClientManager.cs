@@ -11,6 +11,13 @@ namespace SimpleHelper
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly HttpClient _httpClient;
 
+
+
+        
+
+
+
+
         public HttpClientManager(string baseUrl)
         {
             _httpClient = new HttpClient {BaseAddress = new Uri(baseUrl)};

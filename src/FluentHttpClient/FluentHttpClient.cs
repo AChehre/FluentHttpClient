@@ -1,22 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace FluentHttpClient
 {
-    public class FluentHttpClient
+    public class FluentHttpClient : IDisposable
     {
+        private readonly IList<string> _acceptHeaders;
         private readonly string _baseUrl;
-        private readonly Dictionary<string, string> _headers;
 
 
         private FluentHttpClient(IHttpClientBuilder httpClientBuilder)
         {
             _baseUrl = httpClientBuilder.BaseUrl;
-            _headers = httpClientBuilder.Headers;
+            _acceptHeaders = httpClientBuilder.AcceptHeaders;
         }
 
         public HttpClient RawHttpClient { get; private set; }
+
+        public void Dispose()
+        {
+            RawHttpClient?.Dispose();
+        }
 
 
         public static HttpClientBuilder NewFluentHttpClient()
@@ -25,17 +34,57 @@ namespace FluentHttpClient
         }
 
 
+        public T Get<T>(string uri)
+        {
+            var response = RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}")).Result;
+            var stringResult = response.Content.ReadAsStringAsync().Result;
+            return JsonConvert.DeserializeObject<T>(stringResult);
+        }
+
+
+        public async Task<T> GetAsync<T>(string uri)
+        {
+            var response = await RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}"));
+            var stringResult = response.Content.ReadAsStringAsync().Result;
+            return JsonConvert.DeserializeObject<T>(stringResult);
+        }
+
+
+        public T Post<T>(string uri, object data)
+        {
+            var serializedData = JsonConvert.SerializeObject(data);
+            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
+
+            var response = RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content).Result;
+            var stringResult = response.Content.ReadAsStringAsync().Result;
+
+            return JsonConvert.DeserializeObject<T>(stringResult);
+        }
+
+
+        public async Task<T> PostAsync<T>(string uri, object data)
+        {
+            var serializedData = JsonConvert.SerializeObject(data);
+            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
+
+            var response = await RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content);
+            var stringResult = await response.Content.ReadAsStringAsync();
+
+            return JsonConvert.DeserializeObject<T>(stringResult);
+        }
+
+
         private interface IHttpClientBuilder
         {
             string BaseUrl { get; }
-            Dictionary<string, string> Headers { get; }
+            IList<string> AcceptHeaders { get; }
             int Timeout { get; }
         }
 
 
         public class HttpClientBuilder : IHttpClientBuilder
         {
-            private readonly Dictionary<string, string> _headers = new Dictionary<string, string>();
+            private readonly IList<string> _acceptHeaders = new List<string>();
             private string _baseUrl;
             private int _timeout;
 
@@ -43,21 +92,20 @@ namespace FluentHttpClient
             string IHttpClientBuilder.BaseUrl => _baseUrl;
 
 
-            Dictionary<string, string> IHttpClientBuilder.Headers => _headers;
+            IList<string> IHttpClientBuilder.AcceptHeaders => _acceptHeaders;
 
             int IHttpClientBuilder.Timeout => _timeout;
 
 
-            public HttpClientBuilder AddHeader(string key, string value)
+            public HttpClientBuilder AddAcceptHeader(string value)
             {
-                _headers[key] = value;
+                _acceptHeaders.Add(value);
                 return this;
             }
 
             public HttpClientBuilder AddApplicationJsonHeader()
             {
-                _headers["content-type"] = "application/json";
-                return this;
+                return AddAcceptHeader("application/json");
             }
 
 
@@ -99,10 +147,11 @@ namespace FluentHttpClient
                     httpClient.Timeout = new TimeSpan(0, 0, httpClientBuilder.Timeout);
                 }
 
-                foreach (var header in httpClientBuilder.Headers)
+                foreach (var acceptHeader in _acceptHeaders)
                 {
-                    httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptHeader));
                 }
+
 
                 return httpClient;
             }
