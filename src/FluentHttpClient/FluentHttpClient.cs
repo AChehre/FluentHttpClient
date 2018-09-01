@@ -34,7 +34,7 @@ namespace FluentHttpClient
         }
 
 
-        public T Get<T>(string uri)
+        public T GetAsJson<T>(string uri)
         {
             var response = RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}")).Result;
             var stringResult = response.Content.ReadAsStringAsync().Result;
@@ -42,7 +42,7 @@ namespace FluentHttpClient
         }
 
 
-        public async Task<T> GetAsync<T>(string uri)
+        public async Task<T> GetAsJsonAsync<T>(string uri)
         {
             var response = await RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}"));
             var stringResult = response.Content.ReadAsStringAsync().Result;
@@ -50,27 +50,21 @@ namespace FluentHttpClient
         }
 
 
-        public T Post<T>(string uri, object data)
+        public HttpResponseMessage PostAsJson(string uri, object data)
         {
             var serializedData = JsonConvert.SerializeObject(data);
             var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
 
-            var response = RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content).Result;
-            var stringResult = response.Content.ReadAsStringAsync().Result;
-
-            return JsonConvert.DeserializeObject<T>(stringResult);
+            return RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content).Result;
         }
 
 
-        public async Task<T> PostAsync<T>(string uri, object data)
+        public async Task<HttpResponseMessage> PostAsJsonAsync(string uri, object data)
         {
             var serializedData = JsonConvert.SerializeObject(data);
             var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
 
-            var response = await RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content);
-            var stringResult = await response.Content.ReadAsStringAsync();
-
-            return JsonConvert.DeserializeObject<T>(stringResult);
+            return await RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content);
         }
 
 
