@@ -12,6 +12,7 @@ namespace FluentHttpClient
     {
         private readonly IList<string> _acceptHeaders;
         private readonly string _baseUrl;
+        private readonly IList<FluentHttpClientMiddleware> _fluentHttpClientMiddlewares = new List<FluentHttpClientMiddleware>();
 
 
         private FluentHttpClient(IHttpClientBuilder httpClientBuilder)
@@ -73,6 +74,7 @@ namespace FluentHttpClient
             string BaseUrl { get; }
             IList<string> AcceptHeaders { get; }
             int Timeout { get; }
+            IList<FluentHttpClientMiddleware> FluentHttpClientMiddlewares { get; }
         }
 
 
@@ -81,12 +83,13 @@ namespace FluentHttpClient
             private readonly IList<string> _acceptHeaders = new List<string>();
             private string _baseUrl;
             private int _timeout;
-
+            private readonly IList<FluentHttpClientMiddleware> _fluentHttpClientMiddlewares = new List<FluentHttpClientMiddleware>();
 
             string IHttpClientBuilder.BaseUrl => _baseUrl;
 
 
             IList<string> IHttpClientBuilder.AcceptHeaders => _acceptHeaders;
+            IList<FluentHttpClientMiddleware> IHttpClientBuilder.FluentHttpClientMiddlewares  => _fluentHttpClientMiddlewares;
 
             int IHttpClientBuilder.Timeout => _timeout;
 
@@ -96,6 +99,13 @@ namespace FluentHttpClient
                 _acceptHeaders.Add(value);
                 return this;
             }
+
+            public HttpClientBuilder AddMiddleware(FluentHttpClientMiddleware middleware)
+            {
+                _fluentHttpClientMiddlewares.Add(middleware);
+                return this;
+            }
+
 
             public HttpClientBuilder AddApplicationJsonHeader()
             {
