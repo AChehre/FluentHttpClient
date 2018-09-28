@@ -1,47 +1,43 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace FluentHttpClient
 {
 
-    public class NLogMiddleware : FluentHttpClientMiddleware
+    public delegate Task<HttpResponseMessage> IFluentHttpClientRequestDelegate(FluentHttpClientRequest request);
+
+
+    public interface IFluentHttpClientMiddleware
     {
+        Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request, IFluentHttpClientRequestDelegate next);
+    }
 
-        //private readonly ILogger _logger;
 
-        public NLogMiddleware(FluentHttpClientMiddleware next) : base(next)
+    public class TestMiddleware : IFluentHttpClientMiddleware
+    {
+        public async Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request, IFluentHttpClientRequestDelegate next)
         {
-        }
 
-
-        public override HttpResponseMessage OnRequest(FluentHttpClientRequest request)
-        {
-            return Next.OnRequest(request);
+            return await next(request);
         }
     }
 
 
 
 
-    public abstract class FluentHttpClientMiddleware //: IFluentHttpClientMiddleware
+    public class NLogMiddleware : IFluentHttpClientMiddleware
     {
 
-        protected readonly FluentHttpClientMiddleware Next;
-
-        protected FluentHttpClientMiddleware(FluentHttpClientMiddleware next)
+        public async Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request, IFluentHttpClientRequestDelegate next)
         {
-            Next = next;
+
+            return await next(request);
         }
-
-        public abstract HttpResponseMessage OnRequest(FluentHttpClientRequest request);
     }
 
 
 
 
-    public class FluentHttpClientRequest
-    {
-        public string Uri { get; set; }
-        public object Data { get; set; }
-    }
+   
 }

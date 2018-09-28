@@ -12,10 +12,10 @@ namespace FluentHttpClient
     {
         private readonly IList<string> _acceptHeaders;
         private readonly string _baseUrl;
-        private readonly IList<FluentHttpClientMiddleware> _fluentHttpClientMiddlewares = new List<FluentHttpClientMiddleware>();
+       
 
 
-        private FluentHttpClient(IHttpClientBuilder httpClientBuilder)
+        private FluentHttpClient(IFluentHttpClientBuilder httpClientBuilder)
         {
             _baseUrl = httpClientBuilder.BaseUrl;
             _acceptHeaders = httpClientBuilder.AcceptHeaders;
@@ -29,9 +29,9 @@ namespace FluentHttpClient
         }
 
 
-        public static HttpClientBuilder NewFluentHttpClient()
+        public static FluentHttpClientBuilder NewFluentHttpClient()
         {
-            return new HttpClientBuilder();
+            return new FluentHttpClientBuilder();
         }
 
 
@@ -69,58 +69,61 @@ namespace FluentHttpClient
         }
 
 
-        private interface IHttpClientBuilder
+        private interface IFluentHttpClientBuilder
         {
             string BaseUrl { get; }
             IList<string> AcceptHeaders { get; }
             int Timeout { get; }
-            IList<FluentHttpClientMiddleware> FluentHttpClientMiddlewares { get; }
+            IList<FluentHttpClientMiddlewareConfig> _middlewares { get; }
         }
 
 
-        public class HttpClientBuilder : IHttpClientBuilder
+        public class FluentHttpClientBuilder : IFluentHttpClientBuilder
         {
             private readonly IList<string> _acceptHeaders = new List<string>();
             private string _baseUrl;
             private int _timeout;
-            private readonly IList<FluentHttpClientMiddleware> _fluentHttpClientMiddlewares = new List<FluentHttpClientMiddleware>();
-
-            string IHttpClientBuilder.BaseUrl => _baseUrl;
-
-
-            IList<string> IHttpClientBuilder.AcceptHeaders => _acceptHeaders;
-            IList<FluentHttpClientMiddleware> IHttpClientBuilder.FluentHttpClientMiddlewares  => _fluentHttpClientMiddlewares;
-
-            int IHttpClientBuilder.Timeout => _timeout;
+            private  IList<FluentHttpClientMiddlewareConfig> _middlewares = new List<FluentHttpClientMiddlewareConfig>();
+            string IFluentHttpClientBuilder.BaseUrl => _baseUrl;
 
 
-            public HttpClientBuilder AddAcceptHeader(string value)
+            IList<string> IFluentHttpClientBuilder.AcceptHeaders => _acceptHeaders;
+            IList<FluentHttpClientMiddlewareConfig> IFluentHttpClientBuilder._middlewares => _middlewares;
+
+            int IFluentHttpClientBuilder.Timeout => _timeout;
+
+
+            public FluentHttpClientBuilder AddAcceptHeader(string value)
             {
                 _acceptHeaders.Add(value);
                 return this;
             }
 
-            public HttpClientBuilder AddMiddleware(FluentHttpClientMiddleware middleware)
+            public FluentHttpClientBuilder UseMiddleware<T>(params object[] args) where T : IFluentHttpClientMiddleware
+            => UseMiddleware(typeof(T), args);
+
+         
+            public FluentHttpClientBuilder UseMiddleware(Type middleware, params object[] args)
             {
-                _fluentHttpClientMiddlewares.Add(middleware);
+                _middlewares.Add(new FluentHttpClientMiddlewareConfig(middleware, args));
                 return this;
             }
 
 
-            public HttpClientBuilder AddApplicationJsonHeader()
+            public FluentHttpClientBuilder AddApplicationJsonHeader()
             {
                 return AddAcceptHeader("application/json");
             }
 
 
-            public HttpClientBuilder WithBaseUrl(string baseUrl)
+            public FluentHttpClientBuilder WithBaseUrl(string baseUrl)
             {
                 _baseUrl = baseUrl;
                 return this;
             }
 
 
-            public HttpClientBuilder WithTimeout(int timeout)
+            public FluentHttpClientBuilder WithTimeout(int timeout)
             {
                 _timeout = timeout;
                 return this;
@@ -136,7 +139,7 @@ namespace FluentHttpClient
             }
 
 
-            private HttpClient BuildHttpClient(IHttpClientBuilder httpClientBuilder)
+            private HttpClient BuildHttpClient(IFluentHttpClientBuilder httpClientBuilder)
             {
                 var httpClient = new HttpClient();
 
