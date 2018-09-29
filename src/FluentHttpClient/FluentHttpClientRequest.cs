@@ -1,16 +1,30 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FluentHttpClient
 {
     public class FluentHttpClientRequest
     {
-        public string Uri { get; set; }
+
+        public FluentHttpClientRequest(HttpRequestMessage message)
+        {
+            Message = message;
+        }
+
+        public Uri Uri
+        {
+            get => Message.RequestUri;
+            set => Message.RequestUri = value;
+        }
+
         public object Data { get; set; }
-        public HttpMethod Method { get; set; }
+
+        public HttpMethod Method
+        {
+            get => Message.Method;
+            set => Message.Method = value;
+        }
+
+        public HttpRequestMessage Message { get; }
     }
 }

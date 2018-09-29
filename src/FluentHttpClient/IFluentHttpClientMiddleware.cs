@@ -1,43 +1,55 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace FluentHttpClient
 {
-
-    public delegate Task<HttpResponseMessage> IFluentHttpClientRequestDelegate(FluentHttpClientRequest request);
-
-
-    public interface IFluentHttpClientMiddleware
+    public abstract class FluentHttpClientMiddleware
     {
-        Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request, IFluentHttpClientRequestDelegate next);
+        protected FluentHttpClientMiddleware(FluentHttpClientMiddleware next)
+        {
+            Next = next;
+        }
+
+
+        protected FluentHttpClientMiddleware Next { get; set; }
+
+
+        public abstract Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request);
     }
 
 
-    public class TestMiddleware : IFluentHttpClientMiddleware
+    public class HttpClientMiddleware : FluentHttpClientMiddleware
     {
-        public async Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request, IFluentHttpClientRequestDelegate next)
-        {
+        private readonly FluentHttpClient _httpClient;
 
-            return await next(request);
+        public HttpClientMiddleware(FluentHttpClientMiddleware next, FluentHttpClient httpClient) : base(next)
+        {
+            _httpClient = httpClient;
+        }
+
+
+        public override async Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request)
+        {
+            if (Next != null)
+            {
+                return await Next.InvokeAsync(request);
+            }
+
+            return _httpClient.SendAsync(request);
         }
     }
 
 
-
-
-    public class NLogMiddleware : IFluentHttpClientMiddleware
+    public class NLogMiddleware : FluentHttpClientMiddleware
     {
-
-        public async Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request, IFluentHttpClientRequestDelegate next)
+        public NLogMiddleware(FluentHttpClientMiddleware next) : base(next)
         {
+        }
 
-            return await next(request);
+
+        public override async Task<HttpResponseMessage> InvokeAsync(FluentHttpClientRequest request)
+        {
+            return await Next.InvokeAsync(request);
         }
     }
-
-
-
-
-   
 }

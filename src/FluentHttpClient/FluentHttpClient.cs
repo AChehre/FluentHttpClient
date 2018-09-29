@@ -12,7 +12,6 @@ namespace FluentHttpClient
     {
         private readonly IList<string> _acceptHeaders;
         private readonly string _baseUrl;
-       
 
 
         private FluentHttpClient(IFluentHttpClientBuilder httpClientBuilder)
@@ -35,6 +34,7 @@ namespace FluentHttpClient
         }
 
 
+        #region Json Reques
         public T GetAsJson<T>(string uri)
         {
             var response = RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}")).Result;
@@ -69,11 +69,22 @@ namespace FluentHttpClient
         }
 
 
+        #endregion
+        
+        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage message)
+        {
+
+
+            return await RawHttpClient.SendAsync(message);
+        }
+
         private interface IFluentHttpClientBuilder
         {
             string BaseUrl { get; }
             IList<string> AcceptHeaders { get; }
             int Timeout { get; }
+
+            FluentHttpClientRequest Request { get; }
             IList<FluentHttpClientMiddlewareConfig> _middlewares { get; }
         }
 
@@ -81,11 +92,19 @@ namespace FluentHttpClient
         public class FluentHttpClientBuilder : IFluentHttpClientBuilder
         {
             private readonly IList<string> _acceptHeaders = new List<string>();
+
+
             private string _baseUrl;
+
+
+            private readonly IList<FluentHttpClientMiddlewareConfig> _middlewares =
+                new List<FluentHttpClientMiddlewareConfig>();
+
             private int _timeout;
-            private  IList<FluentHttpClientMiddlewareConfig> _middlewares = new List<FluentHttpClientMiddlewareConfig>();
             string IFluentHttpClientBuilder.BaseUrl => _baseUrl;
 
+
+            FluentHttpClientRequest IFluentHttpClientBuilder.Request { get; }
 
             IList<string> IFluentHttpClientBuilder.AcceptHeaders => _acceptHeaders;
             IList<FluentHttpClientMiddlewareConfig> IFluentHttpClientBuilder._middlewares => _middlewares;
@@ -99,10 +118,12 @@ namespace FluentHttpClient
                 return this;
             }
 
-            public FluentHttpClientBuilder UseMiddleware<T>(params object[] args) where T : IFluentHttpClientMiddleware
-            => UseMiddleware(typeof(T), args);
+            public FluentHttpClientBuilder UseMiddleware<T>(params object[] args) where T : FluentHttpClientMiddleware
+            {
+                return UseMiddleware(typeof(T), args);
+            }
 
-         
+
             public FluentHttpClientBuilder UseMiddleware(Type middleware, params object[] args)
             {
                 _middlewares.Add(new FluentHttpClientMiddlewareConfig(middleware, args));
