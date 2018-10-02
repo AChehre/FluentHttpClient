@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -12,6 +13,7 @@ namespace FluentHttpClient
     {
         private readonly IList<string> _acceptHeaders;
         private readonly string _baseUrl;
+        private readonly IList<IFluentHttpClientMiddleware> _middlewares = new List<IFluentHttpClientMiddleware>();
 
 
         private FluentHttpClient(IFluentHttpClientBuilder httpClientBuilder)
@@ -37,7 +39,6 @@ namespace FluentHttpClient
         public async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest message)
         {
             var response = await RawHttpClient.SendAsync(message.Message);
-
             return new FluentHttpClientResponse(response);
         }
 
@@ -49,7 +50,7 @@ namespace FluentHttpClient
             int Timeout { get; }
 
             FluentHttpClientRequest Request { get; }
-            IList<FluentHttpClientMiddlewareConfig> _middlewares { get; }
+            IList<FluentHttpClientMiddlewareConfig> Middlewares { get; }
         }
 
 
@@ -71,7 +72,7 @@ namespace FluentHttpClient
             FluentHttpClientRequest IFluentHttpClientBuilder.Request { get; }
 
             IList<string> IFluentHttpClientBuilder.AcceptHeaders => _acceptHeaders;
-            IList<FluentHttpClientMiddlewareConfig> IFluentHttpClientBuilder._middlewares => _middlewares;
+            IList<FluentHttpClientMiddlewareConfig> IFluentHttpClientBuilder.Middlewares => _middlewares;
 
             int IFluentHttpClientBuilder.Timeout => _timeout;
 
@@ -82,7 +83,7 @@ namespace FluentHttpClient
                 return this;
             }
 
-            public FluentHttpClientBuilder UseMiddleware<T>(params object[] args) where T : FluentHttpClientMiddleware
+            public FluentHttpClientBuilder UseMiddleware<T>(params object[] args) where T : IFluentHttpClientMiddleware
             {
                 return UseMiddleware(typeof(T), args);
             }
@@ -119,6 +120,30 @@ namespace FluentHttpClient
             {
                 var fluentHttpClient = new FluentHttpClient(this);
                 fluentHttpClient.RawHttpClient = BuildHttpClient(this);
+
+
+                if (_middlewares == null || !_middlewares.Any())
+                {
+                    return fluentHttpClient;
+                }
+
+
+                for (var i = 0; i < _middlewares.Count; i++)
+                {
+                    var middlewareConfig = _middlewares[i];
+                    IFluentHttpClientMiddleware middleware;
+
+
+                    FluentHttpClientRequestDelegate next;
+
+
+                    middleware =
+                        (IFluentHttpClientMiddleware) Activator.CreateInstance(middlewareConfig.Middleware,
+                            middlewareConfig.Args);
+
+                    fluentHttpClient._middlewares.Add(middleware);
+                }
+
 
                 return fluentHttpClient;
             }
