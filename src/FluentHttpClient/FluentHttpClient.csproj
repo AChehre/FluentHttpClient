@@ -47,6 +47,7 @@
     <Compile Include="FluentHttpClient.cs" />
     <Compile Include="FluentHttpClientMiddlewareConfig.cs" />
     <Compile Include="FluentHttpClientRequest.cs" />
+    <Compile Include="FluentHttpClientResponse.cs" />
     <Compile Include="IFluentHttpClientMiddleware.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -34,54 +34,11 @@ namespace FluentHttpClient
         }
 
 
-        #region Json Reques
-        public T GetAsJson<T>(string uri)
+        public async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest message)
         {
-            var response = RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}")).Result;
-            var stringResult = response.Content.ReadAsStringAsync().Result;
-            return JsonConvert.DeserializeObject<T>(stringResult);
-        }
+            var response = await RawHttpClient.SendAsync(message.Message);
 
-
-        public async Task<T> GetAsJsonAsync<T>(string uri)
-        {
-            var response = await RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}"));
-            var stringResult = response.Content.ReadAsStringAsync().Result;
-            return JsonConvert.DeserializeObject<T>(stringResult);
-        }
-
-
-        public HttpResponseMessage PostAsJson(string uri, object data)
-        {
-            var serializedData = JsonConvert.SerializeObject(data);
-            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
-
-            return RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content).Result;
-        }
-
-
-        public async Task<HttpResponseMessage> PostAsJsonAsync(string uri, object data)
-        {
-            var serializedData = JsonConvert.SerializeObject(data);
-            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
-
-            return await RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content);
-        }
-
-
-        #endregion
-        
-        //public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage message)
-        //{
-
-
-        //    return await RawHttpClient.SendAsync(message);
-        //}
-
-
-        public async Task<HttpResponseMessage> SendAsync(FluentHttpClientRequest message)
-        {
-            return await RawHttpClient.SendAsync(message.Message);
+            return new FluentHttpClientResponse(response);
         }
 
 
@@ -101,11 +58,11 @@ namespace FluentHttpClient
             private readonly IList<string> _acceptHeaders = new List<string>();
 
 
-            private string _baseUrl;
-
-
             private readonly IList<FluentHttpClientMiddlewareConfig> _middlewares =
                 new List<FluentHttpClientMiddlewareConfig>();
+
+
+            private string _baseUrl;
 
             private int _timeout;
             string IFluentHttpClientBuilder.BaseUrl => _baseUrl;
@@ -191,5 +148,43 @@ namespace FluentHttpClient
                 return httpClient;
             }
         }
+
+
+        #region Json Reques
+
+        public T GetAsJson<T>(string uri)
+        {
+            var response = RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}")).Result;
+            var stringResult = response.Content.ReadAsStringAsync().Result;
+            return JsonConvert.DeserializeObject<T>(stringResult);
+        }
+
+
+        public async Task<T> GetAsJsonAsync<T>(string uri)
+        {
+            var response = await RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}"));
+            var stringResult = response.Content.ReadAsStringAsync().Result;
+            return JsonConvert.DeserializeObject<T>(stringResult);
+        }
+
+
+        public HttpResponseMessage PostAsJson(string uri, object data)
+        {
+            var serializedData = JsonConvert.SerializeObject(data);
+            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
+
+            return RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content).Result;
+        }
+
+
+        public async Task<HttpResponseMessage> PostAsJsonAsync(string uri, object data)
+        {
+            var serializedData = JsonConvert.SerializeObject(data);
+            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
+
+            return await RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content);
+        }
+
+        #endregion
     }
 }
