@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -11,7 +12,7 @@ namespace FluentHttpClient
     }
 
 
-    public abstract class FluentHttpClientMiddleware
+    public abstract class FluentHttpClientMiddleware : IFluentHttpClientMiddleware
     {
         protected FluentHttpClientMiddleware(FluentHttpClientRequestDelegate next)
         {
@@ -28,6 +29,39 @@ namespace FluentHttpClient
 
 
 
+
+    public class NlogFluentHttpClientMiddleware : FluentHttpClientMiddleware
+    {
+        public NlogFluentHttpClientMiddleware(FluentHttpClientRequestDelegate next) :base(next)
+        {
+        
+        }
+
+
+     
+        public override async Task<FluentHttpClientResponse> InvokeAsync(FluentHttpClientRequest request)
+        {
+           Debug.WriteLine("what?!");
+           return  await Next(request);
+        }
+    }
+
+
+    public class Nlog2FluentHttpClientMiddleware : FluentHttpClientMiddleware
+    {
+        public Nlog2FluentHttpClientMiddleware(FluentHttpClientRequestDelegate next) : base(next)
+        {
+
+        }
+
+
+
+        public override async Task<FluentHttpClientResponse> InvokeAsync(FluentHttpClientRequest request)
+        {
+            Debug.WriteLine("what the ...?!");
+            return await Next(request);
+        }
+    }
 
 
 

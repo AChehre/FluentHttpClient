@@ -13,7 +13,7 @@ namespace FluentHttpClient
     {
         private readonly IList<string> _acceptHeaders;
         private readonly string _baseUrl;
-        private readonly IList<IFluentHttpClientMiddleware> _middlewares = new List<IFluentHttpClientMiddleware>();
+        private FluentHttpClientRequestDelegate _requestDelegate;
 
 
         private FluentHttpClient(IFluentHttpClientBuilder httpClientBuilder)
@@ -36,10 +36,23 @@ namespace FluentHttpClient
         }
 
 
+        private async Task<FluentHttpClientResponse> SendMessageAsync(FluentHttpClientRequest message)
+        {
+            return new FluentHttpClientResponse(null);
+            //var response = await RawHttpClient.SendAsync(message.Message);
+            //return new FluentHttpClientResponse(response);
+        }
+
+
         public async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest message)
         {
-            var response = await RawHttpClient.SendAsync(message.Message);
-            return new FluentHttpClientResponse(response);
+            if (_requestDelegate != null)
+            {
+                return await _requestDelegate.Invoke(message);
+            }
+
+            return await SendMessageAsync(message);
+
         }
 
 
@@ -127,23 +140,56 @@ namespace FluentHttpClient
                     return fluentHttpClient;
                 }
 
+                FluentHttpClientRequestDelegate invokeDelegate = null;
+                FluentHttpClientRequestDelegate lastInvokeDelegate = null;
+                IFluentHttpClientMiddleware previousMiddleware = null;
 
-                for (var i = 0; i < _middlewares.Count; i++)
+                for (var i = _middlewares.Count-1; i >= 0; i--)
+
                 {
                     var middlewareConfig = _middlewares[i];
-                    IFluentHttpClientMiddleware middleware;
 
 
-                    FluentHttpClientRequestDelegate next;
+                    if (i == 0)
+                    {
+                        invokeDelegate = fluentHttpClient.SendMessageAsync;
+                    }
+                    else
+                    {
+                        if (previousMiddleware != null)
+                        invokeDelegate = previousMiddleware.InvokeAsync;
+                    }
 
 
-                    middleware =
-                        (IFluentHttpClientMiddleware) Activator.CreateInstance(middlewareConfig.Middleware,
-                            middlewareConfig.Args);
 
-                    fluentHttpClient._middlewares.Add(middleware);
+
+                  
+                        object[] constructorArgs;
+                        if (middlewareConfig.Args == null)
+                        {
+                            constructorArgs = new object[] {invokeDelegate};
+                        }
+                        else
+                        {
+                            constructorArgs = new object[middlewareConfig.Args.Length + 1];
+                            constructorArgs[0] = invokeDelegate;
+                            Array.Copy(middlewareConfig.Args, 0, constructorArgs, 1, middlewareConfig.Args.Length);
+                        }
+
+                        previousMiddleware =
+                            (IFluentHttpClientMiddleware) Activator.CreateInstance(middlewareConfig.Middleware,
+                                constructorArgs);
+                   
+
+                    if(i == _middlewares.Count - 1)
+                        fluentHttpClient._requestDelegate = previousMiddleware.InvokeAsync;
+                    //if (isFirst)
+                    //    httpResult = await instance.Invoke(request);
+                    //else
+                    //    previousMiddleware = instance;
                 }
 
+                
 
                 return fluentHttpClient;
             }
