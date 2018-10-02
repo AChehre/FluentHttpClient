@@ -38,9 +38,8 @@ namespace FluentHttpClient
 
         private async Task<FluentHttpClientResponse> SendMessageAsync(FluentHttpClientRequest message)
         {
-            return new FluentHttpClientResponse(null);
-            //var response = await RawHttpClient.SendAsync(message.Message);
-            //return new FluentHttpClientResponse(response);
+            var response = await RawHttpClient.SendAsync(message.Message);
+            return new FluentHttpClientResponse(response);
         }
 
 
@@ -52,7 +51,6 @@ namespace FluentHttpClient
             }
 
             return await SendMessageAsync(message);
-
         }
 
 
@@ -131,8 +129,10 @@ namespace FluentHttpClient
 
             public FluentHttpClient Build()
             {
-                var fluentHttpClient = new FluentHttpClient(this);
-                fluentHttpClient.RawHttpClient = BuildHttpClient(this);
+                var fluentHttpClient = new FluentHttpClient(this)
+                {
+                    RawHttpClient = BuildHttpClient(this)
+                };
 
 
                 if (_middlewares == null || !_middlewares.Any())
@@ -140,56 +140,31 @@ namespace FluentHttpClient
                     return fluentHttpClient;
                 }
 
-                FluentHttpClientRequestDelegate invokeDelegate = null;
-                FluentHttpClientRequestDelegate lastInvokeDelegate = null;
-                IFluentHttpClientMiddleware previousMiddleware = null;
+                FluentHttpClientRequestDelegate invokeDelegate = fluentHttpClient.SendMessageAsync;
 
-                for (var i = _middlewares.Count-1; i >= 0; i--)
 
+                foreach (var middlewareConfig in _middlewares)
                 {
-                    var middlewareConfig = _middlewares[i];
-
-
-                    if (i == 0)
+                    object[] constructorArgs;
+                    if (middlewareConfig.Args == null)
                     {
-                        invokeDelegate = fluentHttpClient.SendMessageAsync;
+                        constructorArgs = new object[] {invokeDelegate};
                     }
                     else
                     {
-                        if (previousMiddleware != null)
-                        invokeDelegate = previousMiddleware.InvokeAsync;
+                        constructorArgs = new object[middlewareConfig.Args.Length + 1];
+                        constructorArgs[0] = invokeDelegate;
+                        Array.Copy(middlewareConfig.Args, 0, constructorArgs, 1, middlewareConfig.Args.Length);
                     }
 
-
-
-
-                  
-                        object[] constructorArgs;
-                        if (middlewareConfig.Args == null)
-                        {
-                            constructorArgs = new object[] {invokeDelegate};
-                        }
-                        else
-                        {
-                            constructorArgs = new object[middlewareConfig.Args.Length + 1];
-                            constructorArgs[0] = invokeDelegate;
-                            Array.Copy(middlewareConfig.Args, 0, constructorArgs, 1, middlewareConfig.Args.Length);
-                        }
-
-                        previousMiddleware =
-                            (IFluentHttpClientMiddleware) Activator.CreateInstance(middlewareConfig.Middleware,
-                                constructorArgs);
-                   
-
-                    if(i == _middlewares.Count - 1)
-                        fluentHttpClient._requestDelegate = previousMiddleware.InvokeAsync;
-                    //if (isFirst)
-                    //    httpResult = await instance.Invoke(request);
-                    //else
-                    //    previousMiddleware = instance;
+                    var middleware = (IFluentHttpClientMiddleware) Activator.CreateInstance(middlewareConfig.Middleware,
+                        constructorArgs);
+                    invokeDelegate = middleware.InvokeAsync;
                 }
 
-                
+
+                fluentHttpClient._requestDelegate = invokeDelegate;
+
 
                 return fluentHttpClient;
             }
