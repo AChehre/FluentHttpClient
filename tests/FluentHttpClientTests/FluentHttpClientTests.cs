@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Xunit;
 
 namespace FluentHttpClientTests
@@ -13,6 +14,13 @@ namespace FluentHttpClientTests
 
 
             //Assert.Equal(baseUrl.ToLower(), fluentHttpClient.RawHttpClient.BaseAddress.AbsoluteUri.ToLower());
+
+
+            var client = FluentHttpClient.FluentHttpClient.NewFluentHttpClient().WithTimeout(1).Build();
+
+            var request  = FluentHttpClient.FluentHttpClientRequest.CreateNewRequest().WithUri("").WithMethod(HttpMethod.Get).Build();
+
+            //client.SendAsync(request).Result.;
         }
 
 

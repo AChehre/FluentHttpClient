@@ -71,12 +71,19 @@ namespace FluentHttpClient
 
         #endregion
         
-        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage message)
+        //public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage message)
+        //{
+
+
+        //    return await RawHttpClient.SendAsync(message);
+        //}
+
+
+        public async Task<HttpResponseMessage> SendAsync(FluentHttpClientRequest message)
         {
-
-
-            return await RawHttpClient.SendAsync(message);
+            return await RawHttpClient.SendAsync(message.Message);
         }
+
 
         private interface IFluentHttpClientBuilder
         {

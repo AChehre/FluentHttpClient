@@ -35,7 +35,7 @@ namespace FluentHttpClient
                 return await Next.InvokeAsync(request);
             }
 
-            return _httpClient.SendAsync(request);
+            return await _httpClient.SendAsync(request);
         }
     }
 
