@@ -198,20 +198,7 @@ namespace FluentHttpClient
 
         #region Json Reques
 
-        public T GetAsJson<T>(string uri)
-        {
-            var response = RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}")).Result;
-            var stringResult = response.Content.ReadAsStringAsync().Result;
-            return JsonConvert.DeserializeObject<T>(stringResult);
-        }
-
-
-        public async Task<T> GetAsJsonAsync<T>(string uri)
-        {
-            var response = await RawHttpClient.GetAsync(new Uri($"{_baseUrl}/{uri}"));
-            var stringResult = response.Content.ReadAsStringAsync().Result;
-            return JsonConvert.DeserializeObject<T>(stringResult);
-        }
+       
 
 
         public HttpResponseMessage PostAsJson(string uri, object data)

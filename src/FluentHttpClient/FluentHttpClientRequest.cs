@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Http.Formatting;
 
 namespace FluentHttpClient
 {
@@ -85,6 +86,13 @@ namespace FluentHttpClient
             {
                 _body = body;
                 return this;
+            }
+
+
+
+            public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeFormatter formatter, string mediaType = null)
+            {
+                return WithBodyContent(new ObjectContent<T>(body, formatter, mediaType));
             }
 
             public FluentHttpClientRequestBuilder WithUri(Uri uri)
