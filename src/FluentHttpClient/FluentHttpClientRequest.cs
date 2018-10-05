@@ -81,6 +81,29 @@ namespace FluentHttpClient
                 return this;
             }
 
+            public FluentHttpClientRequestBuilder AsPost()
+            {
+                _method = HttpMethod.Post;
+                return this;
+            }
+
+            public FluentHttpClientRequestBuilder AsGet()
+            {
+                _method = HttpMethod.Get;
+                return this;
+            }
+
+            public FluentHttpClientRequestBuilder AsPut()
+            {
+                _method = HttpMethod.Put;
+                return this;
+            }
+
+            public FluentHttpClientRequestBuilder AsDelete()
+            {
+                _method = HttpMethod.Delete;
+                return this;
+            }
 
             public FluentHttpClientRequestBuilder WithBodyContent(HttpContent body)
             {
