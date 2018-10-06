@@ -36,9 +36,16 @@ namespace FluentHttpClient
         }
 
 
-        private async Task<FluentHttpClientResponse> SendMessageAsync(FluentHttpClientRequest message)
+        private async Task<FluentHttpClientResponse> SendMessageAsync(FluentHttpClientRequest request)
         {
-            var response = await RawHttpClient.SendAsync(message.Message);
+            var response = await RawHttpClient.SendAsync(request.Message).ConfigureAwait(false);
+
+            var fluentHttpClientResponse = new FluentHttpClientResponse(response);
+
+
+            fluentHttpClientResponse.Content = await response.Content.ReadAsAsync(request.ReturnType)
+                .ConfigureAwait(false);
+
             return new FluentHttpClientResponse(response);
         }
 

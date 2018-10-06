@@ -15,9 +15,16 @@ namespace FluentHttpClient
             Message = message;
         }
 
+
+        public object Content { get; set; }
         public readonly HttpResponseMessage Message;
 
-      
+        public T As<T>()
+        {
+            return (T) Content;
+        }
+
+
         public HttpStatusCode StatusCode
         {
             get => Message.StatusCode;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Http.Formatting;
+using System.Threading.Tasks;
 
 namespace FluentHttpClient
 {
@@ -9,6 +10,10 @@ namespace FluentHttpClient
         private FluentHttpClientRequest(IFluentHttpClientRequestBuilder fluentHttpClientRequestBuilder)
         {
             Message = fluentHttpClientRequestBuilder.Message;
+            ReturnType = fluentHttpClientRequestBuilder.ReturnType;
+            Body = fluentHttpClientRequestBuilder.Body;
+            Method = fluentHttpClientRequestBuilder.Method;
+            Uri = fluentHttpClientRequestBuilder.Uri;
         }
 
         public Uri Uri
@@ -31,6 +36,7 @@ namespace FluentHttpClient
 
 
         public HttpRequestMessage Message { get; }
+        public Type ReturnType { get; }
 
 
         public static FluentHttpClientRequestBuilder CreateNewRequest()
@@ -46,7 +52,7 @@ namespace FluentHttpClient
             HttpRequestMessage Message { get; }
             HttpContent Body { get; }
 
-            Type ReturnAs { get; }
+            Type ReturnType { get; }
         }
 
         public class FluentHttpClientRequestBuilder : IFluentHttpClientRequestBuilder
@@ -55,7 +61,7 @@ namespace FluentHttpClient
             private HttpRequestMessage _message;
 
             private HttpMethod _method;
-            private Type _returnAs;
+            private Type _returnType;
             private Uri _uri;
 
             Uri IFluentHttpClientRequestBuilder.Uri => _uri;
@@ -65,12 +71,12 @@ namespace FluentHttpClient
             HttpRequestMessage IFluentHttpClientRequestBuilder.Message => _message;
 
             HttpContent IFluentHttpClientRequestBuilder.Body => _body;
-            Type IFluentHttpClientRequestBuilder.ReturnAs => _returnAs;
+            Type IFluentHttpClientRequestBuilder.ReturnType => _returnType;
 
 
             public FluentHttpClientRequestBuilder ReturnAs<T>()
             {
-                _returnAs = typeof(T);
+                _returnType = typeof(T);
                 return this;
             }
 
@@ -129,6 +135,8 @@ namespace FluentHttpClient
                 _uri = new Uri(uri);
                 return this;
             }
+
+
 
             public FluentHttpClientRequest Build()
             {
