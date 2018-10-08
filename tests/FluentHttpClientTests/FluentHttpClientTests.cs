@@ -17,8 +17,9 @@ namespace FluentHttpClientTests
             //Assert.Equal(baseUrl.ToLower(), fluentHttpClient.RawHttpClient.BaseAddress.AbsoluteUri.ToLower());
 
 
-            var client = FluentHttpClient.FluentHttpClient.NewFluentHttpClient().WithTimeout(1).UseMiddleware<NlogFluentHttpClientMiddleware>().UseMiddleware<Nlog2FluentHttpClientMiddleware>().Build();
-            var a = client.SendAsync(null);
+            var client = FluentHttpClient.FluentHttpClient.NewFluentHttpClient().WithTimeout(500)
+                .UseMiddleware<NlogFluentHttpClientMiddleware>().UseMiddleware<Nlog2FluentHttpClientMiddleware>().Build();
+            var a = client.PostAsJson<string>("", new{Id=1 });
 
 
             //client.SendAsync(request).Result.;

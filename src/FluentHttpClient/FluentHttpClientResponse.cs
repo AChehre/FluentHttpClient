@@ -1,29 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FluentHttpClient
 {
     public class FluentHttpClientResponse
     {
+        public readonly HttpResponseMessage Message;
+
         public FluentHttpClientResponse(HttpResponseMessage message)
         {
             Message = message;
         }
-
-
-        public object Content { get; set; }
-        public readonly HttpResponseMessage Message;
-
-        public T As<T>()
-        {
-            return (T) Content;
-        }
-
 
         public HttpStatusCode StatusCode
         {
@@ -40,7 +27,20 @@ namespace FluentHttpClient
 
         public bool IsSuccessStatusCode => Message.IsSuccessStatusCode;
 
-     
-        public void EnsureSuccessStatusCode() => Message.EnsureSuccessStatusCode();
+
+        public void EnsureSuccessStatusCode()
+        {
+            Message.EnsureSuccessStatusCode();
+        }
+    }
+
+
+    public class FluentHttpClientResponse<T> : FluentHttpClientResponse
+    {
+        public FluentHttpClientResponse(HttpResponseMessage message) : base(message)
+        {
+        }
+
+        public T Content { get; set; }
     }
 }
