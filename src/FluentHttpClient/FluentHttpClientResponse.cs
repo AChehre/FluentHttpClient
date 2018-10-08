@@ -37,7 +37,7 @@ namespace FluentHttpClient
 
     public class FluentHttpClientResponse<T> : FluentHttpClientResponse
     {
-        public FluentHttpClientResponse(HttpResponseMessage message) : base(message)
+        public FluentHttpClientResponse(FluentHttpClientResponse response) : base(response.Message)
         {
         }
 

@@ -36,13 +36,20 @@ namespace FluentHttpClient
         }
 
 
+
+        private async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest request)
+        {
+            var response =  await RawHttpClient.SendAsync(request.Message).ConfigureAwait(false);
+            return new FluentHttpClientResponse(response);
+        }
+
         public async Task<FluentHttpClientResponse<T>> SendAsync<T>(FluentHttpClientRequest request)
         {
-            var response = await RawHttpClient.SendAsync(request.Message).ConfigureAwait(false);
+            var response = await SendAsync(request).ConfigureAwait(false); ;
 
             var fluentHttpClientResponse = new FluentHttpClientResponse<T>(response)
             {
-                Content = await response.Content.ReadAsAsync<T>()
+                Content = await response.Message.Content.ReadAsAsync<T>()
                     .ConfigureAwait(false)
             };
             return fluentHttpClientResponse;
@@ -135,30 +142,30 @@ namespace FluentHttpClient
                     return fluentHttpClient;
                 }
 
-                //FluentHttpClientRequestDelegate invokeDelegate = fluentHttpClient.SendMessageAsync;
+                FluentHttpClientRequestDelegate invokeDelegate = fluentHttpClient.SendAsync;
 
 
-                //foreach (var middlewareConfig in _middlewares)
-                //{
-                //    object[] constructorArgs;
-                //    if (middlewareConfig.Args == null)
-                //    {
-                //        constructorArgs = new object[] {invokeDelegate};
-                //    }
-                //    else
-                //    {
-                //        constructorArgs = new object[middlewareConfig.Args.Length + 1];
-                //        constructorArgs[0] = invokeDelegate;
-                //        Array.Copy(middlewareConfig.Args, 0, constructorArgs, 1, middlewareConfig.Args.Length);
-                //    }
+                foreach (var middlewareConfig in _middlewares)
+                {
+                    object[] constructorArgs;
+                    if (middlewareConfig.Args == null)
+                    {
+                        constructorArgs = new object[] { invokeDelegate };
+                    }
+                    else
+                    {
+                        constructorArgs = new object[middlewareConfig.Args.Length + 1];
+                        constructorArgs[0] = invokeDelegate;
+                        Array.Copy(middlewareConfig.Args, 0, constructorArgs, 1, middlewareConfig.Args.Length);
+                    }
 
-                //    var middleware = (IFluentHttpClientMiddleware) Activator.CreateInstance(middlewareConfig.Middleware,
-                //        constructorArgs);
-                //    invokeDelegate = middleware.InvokeAsync;
-                //}
+                    var middleware = (IFluentHttpClientMiddleware)Activator.CreateInstance(middlewareConfig.Middleware,
+                        constructorArgs);
+                    invokeDelegate = middleware.InvokeAsync;
+                }
 
 
-                //fluentHttpClient._requestDelegate = invokeDelegate;
+                fluentHttpClient._requestDelegate = invokeDelegate;
 
 
                 return fluentHttpClient;
@@ -191,28 +198,5 @@ namespace FluentHttpClient
         }
 
 
-        #region Json Reques
-
-       
-
-
-        public HttpResponseMessage PostAsJson(string uri, object data)
-        {
-            var serializedData = JsonConvert.SerializeObject(data);
-            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
-
-            return RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content).Result;
-        }
-
-
-        public async Task<HttpResponseMessage> PostAsJsonAsync(string uri, object data)
-        {
-            var serializedData = JsonConvert.SerializeObject(data);
-            var content = new StringContent(serializedData, Encoding.UTF8, "application/json");
-
-            return await RawHttpClient.PostAsync(new Uri($"{_baseUrl}/{uri}"), content);
-        }
-
-        #endregion
     }
 }
