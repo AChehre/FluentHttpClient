@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Http.Formatting;
-using System.Threading.Tasks;
+using System.Net.Http.Headers;
 
 namespace FluentHttpClient
 {
     public class FluentHttpClientRequest
     {
-        private FluentHttpClientRequest(IFluentHttpClientRequestBuilder fluentHttpClientRequestBuilder)
+        private FluentHttpClientRequest(IFluentHttpClientRequestBuilder fluentHttpClientRequestBuilder,
+            FluentHttpClient fluentHttpClient)
         {
             Message = fluentHttpClientRequestBuilder.Message;
             ReturnType = fluentHttpClientRequestBuilder.ReturnType;
             Body = fluentHttpClientRequestBuilder.Body;
             Method = fluentHttpClientRequestBuilder.Method;
             Uri = fluentHttpClientRequestBuilder.Uri;
+            FluentHttpClient = fluentHttpClient;
         }
 
         public Uri Uri
@@ -35,13 +37,15 @@ namespace FluentHttpClient
         }
 
 
+        public FluentHttpClient FluentHttpClient { get; }
+
         public HttpRequestMessage Message { get; }
         public Type ReturnType { get; }
 
 
-        public static FluentHttpClientRequestBuilder CreateNewRequest()
+        public static FluentHttpClientRequestBuilder CreateNewRequest(FluentHttpClient fluentHttpClient)
         {
-            return new FluentHttpClientRequestBuilder();
+            return new FluentHttpClientRequestBuilder(fluentHttpClient);
         }
 
 
@@ -58,11 +62,18 @@ namespace FluentHttpClient
         public class FluentHttpClientRequestBuilder : IFluentHttpClientRequestBuilder
         {
             private HttpContent _body;
+            private readonly FluentHttpClient _fluentHttpClient;
             private HttpRequestMessage _message;
 
             private HttpMethod _method;
             private Type _returnType;
             private Uri _uri;
+
+
+            public FluentHttpClientRequestBuilder(FluentHttpClient fluentHttpClient)
+            {
+                _fluentHttpClient = fluentHttpClient;
+            }
 
             Uri IFluentHttpClientRequestBuilder.Uri => _uri;
 
@@ -87,7 +98,6 @@ namespace FluentHttpClient
                 return this;
             }
 
-           
 
             public FluentHttpClientRequestBuilder WithBodyContent(HttpContent body)
             {
@@ -96,11 +106,32 @@ namespace FluentHttpClient
             }
 
 
-
-            public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeFormatter formatter, string mediaType = null)
+            public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeFormatter formatter,
+                string mediaType = null)
             {
                 return WithBodyContent(new ObjectContent<T>(body, formatter, mediaType));
             }
+
+            public FluentHttpClientRequestBuilder WithBody(object body, MediaTypeFormatter formatter,
+                string mediaType = null)
+            {
+                return WithBodyContent(new ObjectContent(body.GetType(), body, formatter, mediaType));
+            }
+
+            public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeHeaderValue contentType = null)
+            {
+                var formatter = _fluentHttpClient.FluentFormatterOption.GetFormatter(contentType);
+                var mediaType = contentType?.MediaType;
+                return WithBody(body, formatter, mediaType);
+            }
+
+            public FluentHttpClientRequestBuilder WithBody(object body, MediaTypeHeaderValue contentType = null)
+            {
+                var formatter = _fluentHttpClient.FluentFormatterOption.GetFormatter(contentType);
+                var mediaType = contentType?.MediaType;
+                return WithBody(body, formatter, mediaType);
+            }
+
 
             public FluentHttpClientRequestBuilder WithUri(Uri uri)
             {
@@ -115,13 +146,12 @@ namespace FluentHttpClient
             }
 
 
-
             public FluentHttpClientRequest Build()
             {
                 _message.RequestUri = _uri;
                 _message.Method = _method;
                 _message.Content = _body;
-                return new FluentHttpClientRequest(this);
+                return new FluentHttpClientRequest(this, _fluentHttpClient);
             }
         }
     }

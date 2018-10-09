@@ -32,5 +32,12 @@ namespace FluentHttpClient
             builder.WithMethod(HttpMethod.Delete);
             return builder;
         }
+
+
+        public static FluentHttpClientRequest.FluentHttpClientRequestBuilder AsPatch(this FluentHttpClientRequest.FluentHttpClientRequestBuilder builder)
+        {
+            builder.WithMethod(new HttpMethod("PATCH"));
+            return builder;
+        }
     }
 }

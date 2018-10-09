@@ -14,12 +14,14 @@ namespace FluentHttpClient
         private readonly IList<string> _acceptHeaders;
         private readonly string _baseUrl;
         private FluentHttpClientRequestDelegate _requestDelegate;
-
+        public FluentFormatterOption _formatterOption;
+        public FluentFormatterOption FluentFormatterOption => _formatterOption;
 
         private FluentHttpClient(IFluentHttpClientBuilder httpClientBuilder)
         {
             _baseUrl = httpClientBuilder.BaseUrl;
             _acceptHeaders = httpClientBuilder.AcceptHeaders;
+
         }
 
         public HttpClient RawHttpClient { get; private set; }
@@ -61,7 +63,7 @@ namespace FluentHttpClient
             string BaseUrl { get; }
             IList<string> AcceptHeaders { get; }
             int Timeout { get; }
-
+            FluentFormatterOption FormatterOption { get; }
             FluentHttpClientRequest Request { get; }
             IList<FluentHttpClientMiddlewareConfig> Middlewares { get; }
         }
@@ -77,9 +79,11 @@ namespace FluentHttpClient
 
 
             private string _baseUrl;
+            private readonly FluentFormatterOption _formatterOption = new FluentFormatterOption();
 
             private int _timeout;
             string IFluentHttpClientBuilder.BaseUrl => _baseUrl;
+            FluentFormatterOption  IFluentHttpClientBuilder.FormatterOption => _formatterOption;
 
 
             FluentHttpClientRequest IFluentHttpClientBuilder.Request { get; }
@@ -127,6 +131,17 @@ namespace FluentHttpClient
                 _timeout = timeout;
                 return this;
             }
+
+            public FluentHttpClientBuilder ConfigFormatter(Action<FluentFormatterOption> config)
+            {
+                config(_formatterOption);
+                return this;
+            }
+
+           
+
+
+
 
 
             public FluentHttpClient Build()
