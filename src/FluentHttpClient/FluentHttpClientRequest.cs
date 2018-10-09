@@ -11,10 +11,6 @@ namespace FluentHttpClient
             FluentHttpClient fluentHttpClient)
         {
             Message = fluentHttpClientRequestBuilder.Message;
-            ReturnType = fluentHttpClientRequestBuilder.ReturnType;
-            Body = fluentHttpClientRequestBuilder.Body;
-            Method = fluentHttpClientRequestBuilder.Method;
-            Uri = fluentHttpClientRequestBuilder.Uri;
             FluentHttpClient = fluentHttpClient;
         }
 
@@ -40,7 +36,6 @@ namespace FluentHttpClient
         public FluentHttpClient FluentHttpClient { get; }
 
         public HttpRequestMessage Message { get; }
-        public Type ReturnType { get; }
 
 
         public static FluentHttpClientRequestBuilder CreateNewRequest(FluentHttpClient fluentHttpClient)
@@ -56,7 +51,6 @@ namespace FluentHttpClient
             HttpRequestMessage Message { get; }
             HttpContent Body { get; }
 
-            Type ReturnType { get; }
         }
 
         public class FluentHttpClientRequestBuilder : IFluentHttpClientRequestBuilder
@@ -82,7 +76,6 @@ namespace FluentHttpClient
             HttpRequestMessage IFluentHttpClientRequestBuilder.Message => _message;
 
             HttpContent IFluentHttpClientRequestBuilder.Body => _body;
-            Type IFluentHttpClientRequestBuilder.ReturnType => _returnType;
 
 
             public FluentHttpClientRequestBuilder ReturnAs<T>()
@@ -141,16 +134,17 @@ namespace FluentHttpClient
 
             public FluentHttpClientRequestBuilder WithUri(string uri)
             {
-                _uri = new Uri(uri);
+                _uri = new Uri(uri, UriKind.Relative);
                 return this;
             }
 
 
             public FluentHttpClientRequest Build()
             {
-                _message.RequestUri = _uri;
-                _message.Method = _method;
+
+                _message = new HttpRequestMessage(_method, _uri);
                 _message.Content = _body;
+
                 return new FluentHttpClientRequest(this, _fluentHttpClient);
             }
         }

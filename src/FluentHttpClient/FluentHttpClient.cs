@@ -41,20 +41,48 @@ namespace FluentHttpClient
 
         private async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest request)
         {
-            var response =  await RawHttpClient.SendAsync(request.Message).ConfigureAwait(false);
-            return new FluentHttpClientResponse(response);
+            try
+            {
+                var response = await RawHttpClient.SendAsync(request.Message).ConfigureAwait(false);
+                return new FluentHttpClientResponse(response);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+          
+          
         }
 
         public async Task<FluentHttpClientResponse<T>> SendAsync<T>(FluentHttpClientRequest request)
         {
-            var response = await SendAsync(request).ConfigureAwait(false); ;
+            FluentHttpClientResponse response;
 
-            var fluentHttpClientResponse = new FluentHttpClientResponse<T>(response)
+            if (_requestDelegate != null)
             {
-                Content = await response.Message.Content.ReadAsAsync<T>()
-                    .ConfigureAwait(false)
-            };
-            return fluentHttpClientResponse;
+                response =  await _requestDelegate.Invoke(request).ConfigureAwait(false);
+            }
+            else
+            {
+                response = await SendAsync(request).ConfigureAwait(false); ;
+            }
+
+            try
+            {
+                var fluentHttpClientResponse = new FluentHttpClientResponse<T>(response)
+                {
+                    Content = await response.Message.Content.ReadAsAsync<T>()
+                        .ConfigureAwait(false)
+                };
+                return fluentHttpClientResponse;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+          
         }
 
 

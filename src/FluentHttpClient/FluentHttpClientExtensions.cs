@@ -41,6 +41,7 @@ namespace FluentHttpClient
 
         public static async Task<T> Patch<T>(this FluentHttpClient fluentHttpClient, string uri, object body, MediaTypeHeaderValue contentType = null)
         {
+
             var request = fluentHttpClient.CreateNewRequest().AsPatch().WithUri(uri)
                 .WithBody(body, contentType).Build();
             var response = await fluentHttpClient.SendAsync<T>(request);
@@ -52,7 +53,7 @@ namespace FluentHttpClient
 
 
 
-        public static async Task<T> GetAsJson<T>(this FluentHttpClient fluentHttpClient, string uri)
+        public static async Task<T> Get<T>(this FluentHttpClient fluentHttpClient, string uri)
         {
             var request = fluentHttpClient.CreateNewRequest().AsGet().WithUri(uri).Build();
             var response = await fluentHttpClient.SendAsync<T>(request);
