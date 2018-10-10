@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 
 namespace FluentHttpClient
 {
-   public  class FluentHttpClientMiddlewareConfig
+    public class FluentDelegatingHandlerConfig
     {
-        public Type Middleware { get; set; }
+        public Type Handler { get; set; }
 
-      
+
         public object[] Args { get; set; }
 
-        public FluentHttpClientMiddlewareConfig(Type middleware, object[] args)
+        public FluentDelegatingHandlerConfig(Type handler, object[] args)
         {
-            Middleware = middleware;
+            Handler = handler;
             Args = args;
         }
 
