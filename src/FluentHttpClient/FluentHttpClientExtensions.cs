@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Formatting;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace FluentHttpClient
@@ -13,7 +12,8 @@ namespace FluentHttpClient
         }
 
 
-        public static async Task<T> Post<T>(this FluentHttpClient fluentHttpClient, string uri, object body, MediaTypeHeaderValue contentType = null)
+        public static async Task<T> PostAsync<T>(this FluentHttpClient fluentHttpClient, string uri, object body,
+            MediaTypeHeaderValue contentType = null)
         {
             var request = fluentHttpClient.CreateNewRequest().AsPost().WithUri(uri)
                 .WithBody(body, contentType).Build();
@@ -21,7 +21,8 @@ namespace FluentHttpClient
             return response.Content;
         }
 
-        public static async Task<T> Put<T>(this FluentHttpClient fluentHttpClient, string uri, object body, MediaTypeHeaderValue contentType = null)
+        public static async Task<T> PutAsync<T>(this FluentHttpClient fluentHttpClient, string uri, object body,
+            MediaTypeHeaderValue contentType = null)
         {
             var request = fluentHttpClient.CreateNewRequest().AsPut().WithUri(uri)
                 .WithBody(body, contentType).Build();
@@ -30,7 +31,8 @@ namespace FluentHttpClient
         }
 
 
-        public static async Task<T> Delete<T>(this FluentHttpClient fluentHttpClient, string uri, object body, MediaTypeHeaderValue contentType = null)
+        public static async Task<T> DeleteAsync<T>(this FluentHttpClient fluentHttpClient, string uri, object body,
+            MediaTypeHeaderValue contentType = null)
         {
             var request = fluentHttpClient.CreateNewRequest().AsDelete().WithUri(uri)
                 .WithBody(body, contentType).Build();
@@ -39,9 +41,9 @@ namespace FluentHttpClient
         }
 
 
-        public static async Task<T> Patch<T>(this FluentHttpClient fluentHttpClient, string uri, object body, MediaTypeHeaderValue contentType = null)
+        public static async Task<T> PatchAsync<T>(this FluentHttpClient fluentHttpClient, string uri, object body,
+            MediaTypeHeaderValue contentType = null)
         {
-
             var request = fluentHttpClient.CreateNewRequest().AsPatch().WithUri(uri)
                 .WithBody(body, contentType).Build();
             var response = await fluentHttpClient.SendAsync<T>(request);
@@ -49,14 +51,25 @@ namespace FluentHttpClient
         }
 
 
-
-
-
-
-        public static async Task<T> Get<T>(this FluentHttpClient fluentHttpClient, string uri)
+        public static async Task<FluentHttpClientResponse<T>> GetFluentAsync<T>(this FluentHttpClient fluentHttpClient,
+            string uri)
         {
             var request = fluentHttpClient.CreateNewRequest().AsGet().WithUri(uri).Build();
-            var response = await fluentHttpClient.SendAsync<T>(request);
+            return await fluentHttpClient.SendAsync<T>(request);
+        }
+
+        public static async Task<FluentHttpClientResponse> GetAsync(this FluentHttpClient fluentHttpClient,
+            string uri)
+        {
+            var request = fluentHttpClient.CreateNewRequest().AsGet().WithUri(uri).Build();
+            return await fluentHttpClient.SendAsync(request);
+        }
+
+
+        public static async Task<T> GetAsync<T>(this FluentHttpClient fluentHttpClient, string uri)
+        {
+            var response = await GetFluentAsync<T>(fluentHttpClient, uri);
+
             return response.Content;
         }
     }

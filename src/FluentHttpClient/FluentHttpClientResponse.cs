@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace FluentHttpClient
 {
@@ -32,6 +34,9 @@ namespace FluentHttpClient
         {
             Message.EnsureSuccessStatusCode();
         }
+
+
+      
     }
 
 
