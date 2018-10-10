@@ -3,26 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace FluentHttpClient
 {
     public class FluentHttpClient : IDisposable
     {
-        private readonly IList<string> _acceptHeaders;
-        private readonly string _baseUrl;
-        private FluentHttpClientRequestDelegate _requestDelegate;
-        public FluentFormatterOption _formatterOption;
-        public FluentFormatterOption FluentFormatterOption => _formatterOption;
+        private readonly FluentHttpClientRequestDelegate _requestDelegate;
+        public FluentFormatterOption FormatterOption;
 
         private FluentHttpClient(IFluentHttpClientBuilder httpClientBuilder)
         {
-            _baseUrl = httpClientBuilder.BaseUrl;
-            _acceptHeaders = httpClientBuilder.AcceptHeaders;
-
+            FormatterOption = httpClientBuilder.FormatterOption;
+            _requestDelegate = httpClientBuilder.RequestDelegate;
         }
+
+        public FluentFormatterOption FluentFormatterOption => FormatterOption;
 
         public HttpClient RawHttpClient { get; private set; }
 
@@ -38,7 +34,6 @@ namespace FluentHttpClient
         }
 
 
-
         private async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest request)
         {
             try
@@ -51,8 +46,6 @@ namespace FluentHttpClient
                 Console.WriteLine(e);
                 throw;
             }
-          
-          
         }
 
         public async Task<FluentHttpClientResponse<T>> SendAsync<T>(FluentHttpClientRequest request)
@@ -61,11 +54,12 @@ namespace FluentHttpClient
 
             if (_requestDelegate != null)
             {
-                response =  await _requestDelegate.Invoke(request).ConfigureAwait(false);
+                response = await _requestDelegate.Invoke(request).ConfigureAwait(false);
             }
             else
             {
-                response = await SendAsync(request).ConfigureAwait(false); ;
+                response = await SendAsync(request).ConfigureAwait(false);
+                ;
             }
 
             try
@@ -82,18 +76,19 @@ namespace FluentHttpClient
                 Console.WriteLine(e);
                 throw;
             }
-          
         }
 
 
         private interface IFluentHttpClientBuilder
         {
-            string BaseUrl { get; }
+            Uri BaseUrl { get; }
             IList<string> AcceptHeaders { get; }
             int Timeout { get; }
             FluentFormatterOption FormatterOption { get; }
             FluentHttpClientRequest Request { get; }
+            HttpMessageHandler HttpMessageHandler { get; }
             IList<FluentHttpClientMiddlewareConfig> Middlewares { get; }
+            FluentHttpClientRequestDelegate RequestDelegate { get; }
         }
 
 
@@ -101,24 +96,35 @@ namespace FluentHttpClient
         {
             private readonly IList<string> _acceptHeaders = new List<string>();
 
+            private readonly FluentFormatterOption _formatterOption = new FluentFormatterOption();
+
 
             private readonly IList<FluentHttpClientMiddlewareConfig> _middlewares =
                 new List<FluentHttpClientMiddlewareConfig>();
 
 
-            private string _baseUrl;
-            private readonly FluentFormatterOption _formatterOption = new FluentFormatterOption();
+            private Uri _baseUrl;
+
+
+            private HttpMessageHandler _httpMessageHandler;
+
+
+            private FluentHttpClientRequestDelegate _requestDelegate;
+
 
             private int _timeout;
-            string IFluentHttpClientBuilder.BaseUrl => _baseUrl;
-            FluentFormatterOption  IFluentHttpClientBuilder.FormatterOption => _formatterOption;
+
+
+            FluentHttpClientRequestDelegate IFluentHttpClientBuilder.RequestDelegate => _requestDelegate;
+
+            HttpMessageHandler IFluentHttpClientBuilder.HttpMessageHandler => _httpMessageHandler;
+            Uri IFluentHttpClientBuilder.BaseUrl => _baseUrl;
+            FluentFormatterOption IFluentHttpClientBuilder.FormatterOption => _formatterOption;
 
 
             FluentHttpClientRequest IFluentHttpClientBuilder.Request { get; }
-
             IList<string> IFluentHttpClientBuilder.AcceptHeaders => _acceptHeaders;
             IList<FluentHttpClientMiddlewareConfig> IFluentHttpClientBuilder.Middlewares => _middlewares;
-
             int IFluentHttpClientBuilder.Timeout => _timeout;
 
 
@@ -149,6 +155,12 @@ namespace FluentHttpClient
 
             public FluentHttpClientBuilder WithBaseUrl(string baseUrl)
             {
+                _baseUrl = new Uri(baseUrl);
+                return this;
+            }
+
+            public FluentHttpClientBuilder WithBaseUrl(Uri baseUrl)
+            {
                 _baseUrl = baseUrl;
                 return this;
             }
@@ -166,10 +178,12 @@ namespace FluentHttpClient
                 return this;
             }
 
-           
 
-
-
+            public FluentHttpClientBuilder WithHttpMessageHandler(HttpMessageHandler handler)
+            {
+                _httpMessageHandler = handler;
+                return this;
+            }
 
 
             public FluentHttpClient Build()
@@ -193,7 +207,7 @@ namespace FluentHttpClient
                     object[] constructorArgs;
                     if (middlewareConfig.Args == null)
                     {
-                        constructorArgs = new object[] { invokeDelegate };
+                        constructorArgs = new object[] {invokeDelegate};
                     }
                     else
                     {
@@ -202,13 +216,13 @@ namespace FluentHttpClient
                         Array.Copy(middlewareConfig.Args, 0, constructorArgs, 1, middlewareConfig.Args.Length);
                     }
 
-                    var middleware = (IFluentHttpClientMiddleware)Activator.CreateInstance(middlewareConfig.Middleware,
+                    var middleware = (IFluentHttpClientMiddleware) Activator.CreateInstance(middlewareConfig.Middleware,
                         constructorArgs);
                     invokeDelegate = middleware.InvokeAsync;
                 }
 
 
-                fluentHttpClient._requestDelegate = invokeDelegate;
+                _requestDelegate = invokeDelegate;
 
 
                 return fluentHttpClient;
@@ -217,12 +231,11 @@ namespace FluentHttpClient
 
             private HttpClient BuildHttpClient(IFluentHttpClientBuilder httpClientBuilder)
             {
-                var httpClient = new HttpClient();
+                var httpClient = httpClientBuilder.HttpMessageHandler != null
+                    ? new HttpClient(httpClientBuilder.HttpMessageHandler)
+                    : new HttpClient();
 
-                if (!string.IsNullOrWhiteSpace(httpClientBuilder.BaseUrl))
-                {
-                    httpClient.BaseAddress = new Uri(httpClientBuilder.BaseUrl);
-                }
+                httpClient.BaseAddress = httpClientBuilder.BaseUrl;
 
                 if (httpClientBuilder.Timeout > 0)
 
@@ -239,7 +252,5 @@ namespace FluentHttpClient
                 return httpClient;
             }
         }
-
-
     }
 }
