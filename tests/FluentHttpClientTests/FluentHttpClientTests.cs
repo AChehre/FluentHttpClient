@@ -1,7 +1,5 @@
-using System;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentHttpClient;
 using Moq;
@@ -12,10 +10,10 @@ namespace FluentHttpClientTests
     public class FluentHttpClientTests
     {
         [Fact]
-        public async Task WithBaseUrl_SetBaseUrl_ClientShouldHaveBaseUrl()
+        public async Task GetAsyncAsString_return_valid_StatusCode_and_Content()
         {
             const string stringContent = "found";
-
+            const string baseUrl = "http://chehre.net/api/";
 
             var fakeMessageHandler = new Mock<FakeHttpMessageHandler>
             {
@@ -26,7 +24,7 @@ namespace FluentHttpClientTests
             fakeMessageHandler.Setup(t => t.Send(It.Is<HttpRequestMessage>(
                     msg =>
                         msg.Method == HttpMethod.Get &&
-                        msg.RequestUri.ToString() == "http://chehre.net/api/")))
+                        msg.RequestUri.ToString() == baseUrl)))
                 .Returns(new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(stringContent)
@@ -35,7 +33,7 @@ namespace FluentHttpClientTests
 
             var client = FluentHttpClient.FluentHttpClient.NewFluentHttpClient()
                 .WithHttpMessageHandler(fakeMessageHandler.Object)
-                .WithBaseUrl("http://chehre.net/api/").Build();
+                .WithBaseUrl(baseUrl).Build();
 
 
             var response = await client.GetAsync("");
@@ -46,26 +44,5 @@ namespace FluentHttpClientTests
             Assert.Equal(stringContent, content);
         }
 
-
-        [Fact]
-        public void WithBaseUrl_SetTimeout_ClientShouldHaveTimeout()
-        {
-        }
-    }
-
-
-    public class FakeHttpMessageHandler : HttpMessageHandler
-    {
-        public virtual HttpResponseMessage Send(HttpRequestMessage request)
-        {
-            throw new NotImplementedException("Remember to setup this method with your mocking framework");
-        }
-
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            return Task.FromResult(Send(request));
-        }
     }
 }
