@@ -92,18 +92,12 @@ namespace FluentHttpClient
             private readonly FluentFormatterOption _formatterOption = new FluentFormatterOption();
 
 
-            private readonly IList<FluentDelegatingHandlerConfig> _handlers =
-                new List<FluentDelegatingHandlerConfig>();
-
 
             private readonly IList<FluentHttpClientMiddlewareConfig> _middlewares =
                 new List<FluentHttpClientMiddlewareConfig>();
 
 
             private Uri _baseUrl;
-
-            private DelegatingHandler _delegatingHandler;
-
 
             private HttpMessageHandler _httpMessageHandler;
 
@@ -139,34 +133,9 @@ namespace FluentHttpClient
             }
 
 
-            public FluentHttpClientBuilder UseHandler(Type handler, params object[] args)
-            {
-                _handlers.Add(new FluentDelegatingHandlerConfig(handler, args));
-                return this;
-            }
-
-
-            public FluentHttpClientBuilder UseHandler<T>(params object[] args) where T : DelegatingHandler
-            {
-                return UseHandler(typeof(T), args);
-            }
-
-
             public FluentHttpClientBuilder UseMiddleware(Type middleware, params object[] args)
             {
                 _middlewares.Add(new FluentHttpClientMiddlewareConfig(middleware, args));
-                return this;
-            }
-
-
-            public FluentHttpClientBuilder AddDelegatingHandler(DelegatingHandler handler)
-            {
-                if (_delegatingHandler == null)
-                {
-                    _delegatingHandler = handler;
-                }
-
-                _httpMessageHandler = handler;
                 return this;
             }
 
@@ -257,54 +226,14 @@ namespace FluentHttpClient
             }
 
 
-            private DelegatingHandler CreateDelegateHandlers(IEnumerable<FluentDelegatingHandlerConfig> handlerConfigs)
-            {
-                DelegatingHandler lastDelegatingHandler = null;
-
-                foreach (var handlerConfig in handlerConfigs)
-                {
-                    object[] constructorArgs = null;
-                    if (handlerConfig.Args == null)
-                    {
-                        if(lastDelegatingHandler != null) 
-                        constructorArgs = new object[] {lastDelegatingHandler};
-                    }
-                    else
-                    {
-                        if (lastDelegatingHandler != null)
-                        {
-                            constructorArgs = new object[handlerConfig.Args.Length + 1];
-                            constructorArgs[0] = lastDelegatingHandler;
-                            Array.Copy(handlerConfig.Args, 0, constructorArgs, 1, handlerConfig.Args.Length);
-                        }
-                        else
-                        {
-                            constructorArgs = handlerConfig.Args;
-                        }
-                    }
-
-                    if (constructorArgs != null)
-
-                    lastDelegatingHandler = (DelegatingHandler) Activator.CreateInstance(handlerConfig.Handler,
-                        constructorArgs);
-                    else
-                    {
-                        lastDelegatingHandler = (DelegatingHandler)Activator.CreateInstance(handlerConfig.Handler);
-                    }
-                }
-
-                return lastDelegatingHandler;
-            }
+        
 
 
             private HttpClient BuildHttpClient(IFluentHttpClientBuilder httpClientBuilder)
             {
-
-
-
-                //var httpClient = httpClientBuilder.HttpMessageHandler != null
-                //    ? new HttpClient(httpClientBuilder.HttpMessageHandler)
-                //    : new HttpClient();
+                var httpClient = httpClientBuilder.HttpMessageHandler != null
+                    ? new HttpClient(httpClientBuilder.HttpMessageHandler)
+                    : new HttpClient();
 
                 httpClient.BaseAddress = httpClientBuilder.BaseUrl;
 
