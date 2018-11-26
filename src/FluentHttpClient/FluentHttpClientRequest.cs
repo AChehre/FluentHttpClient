@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
+using System.Text;
+using System.Web;
+using Newtonsoft.Json;
 
 namespace FluentHttpClient
 {
@@ -12,6 +17,7 @@ namespace FluentHttpClient
         {
             Message = fluentHttpClientRequestBuilder.Message;
             FluentHttpClient = fluentHttpClient;
+            EnsureSuccessStatusCode = fluentHttpClientRequestBuilder.EnsureSuccessStatusCode;
         }
 
         public Uri Uri
@@ -32,6 +38,8 @@ namespace FluentHttpClient
             set => Message.Content = value;
         }
 
+        public bool EnsureSuccessStatusCode { get; }
+
 
         public FluentHttpClient FluentHttpClient { get; }
 
@@ -50,16 +58,19 @@ namespace FluentHttpClient
             HttpMethod Method { get; }
             HttpRequestMessage Message { get; }
             HttpContent Body { get; }
-
+            bool EnsureSuccessStatusCode { get; }
+            IDictionary<string, string> QueryParams { get; }
         }
 
         public class FluentHttpClientRequestBuilder : IFluentHttpClientRequestBuilder
         {
-            private HttpContent _body;
             private readonly FluentHttpClient _fluentHttpClient;
+            private HttpContent _body;
+            private bool _ensureSuccessStatusCode;
             private HttpRequestMessage _message;
 
             private HttpMethod _method;
+            private IDictionary<string, string> _queryParams;
             private Type _returnType;
             private Uri _uri;
 
@@ -77,10 +88,40 @@ namespace FluentHttpClient
 
             HttpContent IFluentHttpClientRequestBuilder.Body => _body;
 
+            bool IFluentHttpClientRequestBuilder.EnsureSuccessStatusCode => _ensureSuccessStatusCode;
+
+            IDictionary<string, string> IFluentHttpClientRequestBuilder.QueryParams => _queryParams;
+
+
 
             public FluentHttpClientRequestBuilder ReturnAs<T>()
             {
                 _returnType = typeof(T);
+                return this;
+            }
+
+
+            public FluentHttpClientRequestBuilder EnsureSuccessStatusCode()
+            {
+                _ensureSuccessStatusCode = true;
+                return this;
+            }
+
+
+            public FluentHttpClientRequestBuilder WithQueryParams(IDictionary<string, string> queryParams)
+            {
+                _queryParams = queryParams;
+                return this;
+            }
+
+            public FluentHttpClientRequestBuilder WithQueryParam(string key, string value)
+            {
+                if (_queryParams == null)
+                {
+                    _queryParams = new Dictionary<string, string>();
+                }
+
+                _queryParams.Add(key, value);
                 return this;
             }
 
@@ -99,31 +140,51 @@ namespace FluentHttpClient
             }
 
 
-            public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeFormatter formatter,
-                string mediaType = null)
+            //public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeFormatter formatter,
+            //    string mediaType = null)
+            //{
+            //    return WithBodyContent();
+            //}
+
+            public FluentHttpClientRequestBuilder WithBody(object body)
             {
-                return WithBodyContent(new ObjectContent<T>(body, formatter, mediaType));
+                return WithBodyContent(new JsonContent(body));
             }
 
-            public FluentHttpClientRequestBuilder WithBody(object body, MediaTypeFormatter formatter,
-                string mediaType = null)
+            public FluentHttpClientRequestBuilder WithBody(object body, string mediaType)
             {
-                return WithBodyContent(new ObjectContent(body.GetType(), body, formatter, mediaType));
+                return WithBodyContent(new JsonContent(body, mediaType));
             }
 
-            public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeHeaderValue contentType = null)
+
+            public FluentHttpClientRequestBuilder WithPatchBody(object body)
             {
-                var formatter = _fluentHttpClient.FluentFormatterOption.GetFormatter(contentType);
-                var mediaType = contentType?.MediaType;
-                return WithBody(body, formatter, mediaType);
+                return WithBodyContent(new PatchContent(body));
             }
 
-            public FluentHttpClientRequestBuilder WithBody(object body, MediaTypeHeaderValue contentType = null)
+
+         
+            public FluentHttpClientRequestBuilder WithFileBody(string filePath, string apiParamName)
             {
-                var formatter = _fluentHttpClient.FluentFormatterOption.GetFormatter(contentType);
-                var mediaType = contentType?.MediaType;
-                return WithBody(body, formatter, mediaType);
+                return WithBodyContent(new FileContent(filePath, apiParamName));
             }
+
+
+
+
+            //public FluentHttpClientRequestBuilder WithBody<T>(T body, MediaTypeHeaderValue contentType = null)
+            //{
+            //    var formatter = _fluentHttpClient.FluentFormatterOption.GetFormatter(contentType);
+            //    var mediaType = contentType?.MediaType;
+            //    return WithBody(body, formatter, mediaType);
+            //}
+
+            //public FluentHttpClientRequestBuilder WithBody(object body, MediaTypeHeaderValue contentType = null)
+            //{
+            //    var formatter = _fluentHttpClient.FluentFormatterOption.GetFormatter(contentType);
+            //    var mediaType = contentType?.MediaType;
+            //    return WithBody(body, formatter, mediaType);
+            //}
 
 
             public FluentHttpClientRequestBuilder WithUri(Uri uri)
@@ -141,12 +202,81 @@ namespace FluentHttpClient
 
             public FluentHttpClientRequest Build()
             {
+                if (_uri == null)
+                {
+                    WithUri("");
+                }
 
-                _message = new HttpRequestMessage(_method, _uri);
-                _message.Content = _body;
+                var uri = _uri;
+
+                if (_queryParams != null && _queryParams.Any())
+                {
+                    uri = AddParameterToUri(_uri, _queryParams);
+                }
+
+
+                _message = new HttpRequestMessage(_method, uri) {Content = _body};
 
                 return new FluentHttpClientRequest(this, _fluentHttpClient);
             }
+
+
+            private static Uri AddParameterToUri(Uri uri, IDictionary<string, string> queryParams)
+            {
+                var queryString = HttpUtility.ParseQueryString(string.Empty);
+                foreach (var queryParam in queryParams)
+                {
+                    queryString[queryParam.Key] = queryParam.Value;
+                }
+
+                var stringUri = uri.ToString();
+
+                if (stringUri.Contains("?"))
+                {
+                    stringUri += $"&{queryString}";
+                }
+                else
+                {
+                    stringUri += $"?{queryString}";
+                }
+
+                return new Uri(stringUri, UriKind.Relative);
+            }
+        }
+    }
+
+
+    public class JsonContent : StringContent
+    {
+        public JsonContent(object value)
+            : base(JsonConvert.SerializeObject(value), Encoding.UTF8,
+                MimeTypes.Application.Json)
+        {
+        }
+
+        public JsonContent(object value, string mediaType)
+            : base(JsonConvert.SerializeObject(value), Encoding.UTF8, mediaType)
+        {
+        }
+    }
+
+    public class PatchContent : StringContent
+    {
+        public PatchContent(object value)
+            : base(JsonConvert.SerializeObject(value), Encoding.UTF8,
+                MimeTypes.Application.JsonPatch)
+        {
+        }
+    }
+
+    public class FileContent : MultipartFormDataContent
+    {
+        public FileContent(string filePath, string apiParamName)
+        {
+            var fileStream = File.Open(filePath, FileMode.Open);
+            var filename = Path.GetFileName(filePath);
+
+            Add(new StreamContent(fileStream), apiParamName, filename);
         }
     }
 }

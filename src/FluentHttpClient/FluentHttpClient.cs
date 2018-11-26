@@ -1,25 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace FluentHttpClient
 {
     public class FluentHttpClient : IDisposable
     {
         private readonly FluentHttpClientRequestDelegate _requestDelegate;
-        public FluentFormatterOption FormatterOption;
 
 
         private FluentHttpClient(IFluentHttpClientBuilder httpClientBuilder)
         {
-            FormatterOption = httpClientBuilder.FormatterOption;
             _requestDelegate = httpClientBuilder.RequestDelegate;
         }
-
-        public FluentFormatterOption FluentFormatterOption => FormatterOption;
 
         public HttpClient RawHttpClient { get; private set; }
 
@@ -35,41 +34,72 @@ namespace FluentHttpClient
         }
 
 
-        private async Task<FluentHttpClientResponse> RawHttpClientSendAsync(FluentHttpClientRequest request)
+        private async Task<FluentHttpClientResponse> RawHttpClientSendAsync(FluentHttpClientRequest request,
+            CancellationToken cancellationToken)
         {
-            var response = await RawHttpClient.SendAsync(request.Message).ConfigureAwait(false);
+            var response = await RawHttpClient
+                .SendAsync(request.Message, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
             return new FluentHttpClientResponse(response);
         }
 
-        public async Task<FluentHttpClientResponse<T>> SendAsync<T>(FluentHttpClientRequest request)
+        public async Task<FluentHttpClientResponse<T>> SendAsync<T>(FluentHttpClientRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             FluentHttpClientResponse response;
 
             if (_requestDelegate != null)
             {
-                response = await _requestDelegate.Invoke(request).ConfigureAwait(false);
+                response = await _requestDelegate.Invoke(request, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                response = await RawHttpClientSendAsync(request).ConfigureAwait(false);
+                response = await RawHttpClientSendAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (request.EnsureSuccessStatusCode)
+            {
+                response.EnsureSuccessStatusCode();
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new FluentHttpClientResponse<T>(response);
             }
 
 
             return new FluentHttpClientResponse<T>(response)
             {
-                Content = await response.Message.Content.ReadAsAsync<T>().ConfigureAwait(false)
+                Content = await response.As<T>()
             };
         }
 
 
-        public async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest request)
+        private static T DeserializeJsonFromStream<T>(Stream stream)
+        {
+            if (stream == null || stream.CanRead == false)
+            {
+                return default(T);
+            }
+
+            using (var sr = new StreamReader(stream))
+            using (var jtr = new JsonTextReader(sr))
+            {
+                var js = new JsonSerializer();
+                var searchResult = js.Deserialize<T>(jtr);
+                return searchResult;
+            }
+        }
+
+        public async Task<FluentHttpClientResponse> SendAsync(FluentHttpClientRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_requestDelegate != null)
             {
-                return await _requestDelegate.Invoke(request).ConfigureAwait(false);
+                return await _requestDelegate.Invoke(request, cancellationToken).ConfigureAwait(false);
             }
 
-            return await RawHttpClientSendAsync(request).ConfigureAwait(false);
+            return await RawHttpClientSendAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
         private interface IFluentHttpClientBuilder
@@ -77,11 +107,11 @@ namespace FluentHttpClient
             Uri BaseUrl { get; }
             IList<string> AcceptHeaders { get; }
             int Timeout { get; }
-            FluentFormatterOption FormatterOption { get; }
             FluentHttpClientRequest Request { get; }
             HttpMessageHandler HttpMessageHandler { get; }
             IList<FluentHttpClientMiddlewareConfig> Middlewares { get; }
             FluentHttpClientRequestDelegate RequestDelegate { get; }
+            Action<HttpRequestHeaders> DefaultRequestHeaders { get; }
         }
 
 
@@ -89,15 +119,14 @@ namespace FluentHttpClient
         {
             private readonly IList<string> _acceptHeaders = new List<string>();
 
-            private readonly FluentFormatterOption _formatterOption = new FluentFormatterOption();
-
-
 
             private readonly IList<FluentHttpClientMiddlewareConfig> _middlewares =
                 new List<FluentHttpClientMiddlewareConfig>();
 
 
             private Uri _baseUrl;
+
+            private Action<HttpRequestHeaders> _defaultRequestHeaders;
 
             private HttpMessageHandler _httpMessageHandler;
 
@@ -112,13 +141,14 @@ namespace FluentHttpClient
 
             HttpMessageHandler IFluentHttpClientBuilder.HttpMessageHandler => _httpMessageHandler;
             Uri IFluentHttpClientBuilder.BaseUrl => _baseUrl;
-            FluentFormatterOption IFluentHttpClientBuilder.FormatterOption => _formatterOption;
 
 
             FluentHttpClientRequest IFluentHttpClientBuilder.Request { get; }
             IList<string> IFluentHttpClientBuilder.AcceptHeaders => _acceptHeaders;
             IList<FluentHttpClientMiddlewareConfig> IFluentHttpClientBuilder.Middlewares => _middlewares;
             int IFluentHttpClientBuilder.Timeout => _timeout;
+
+            Action<HttpRequestHeaders> IFluentHttpClientBuilder.DefaultRequestHeaders => _defaultRequestHeaders;
 
 
             public FluentHttpClientBuilder AddAcceptHeader(string value)
@@ -142,7 +172,7 @@ namespace FluentHttpClient
 
             public FluentHttpClientBuilder AddApplicationJsonHeader()
             {
-                return AddAcceptHeader("application/json");
+                return AddAcceptHeader(MimeTypes.Application.Json);
             }
 
 
@@ -165,9 +195,11 @@ namespace FluentHttpClient
                 return this;
             }
 
-            public FluentHttpClientBuilder ConfigFormatter(Action<FluentFormatterOption> config)
+
+            public FluentHttpClientBuilder ConfigDefaultRequestHeaders(Action<HttpRequestHeaders> defaultRequestHeaders)
             {
-                config(_formatterOption);
+                _defaultRequestHeaders = defaultRequestHeaders;
+
                 return this;
             }
 
@@ -181,10 +213,19 @@ namespace FluentHttpClient
 
             public FluentHttpClient Build()
             {
+                if (_baseUrl == null)
+                {
+                    _baseUrl = new Uri("");
+                }
+
+
                 var fluentHttpClient = new FluentHttpClient(this)
                 {
                     RawHttpClient = BuildHttpClient(this)
                 };
+
+
+                _defaultRequestHeaders?.Invoke(fluentHttpClient.RawHttpClient.DefaultRequestHeaders);
 
 
                 if (_middlewares == null || !_middlewares.Any())
@@ -224,9 +265,6 @@ namespace FluentHttpClient
 
                 return invokeDelegate;
             }
-
-
-        
 
 
             private HttpClient BuildHttpClient(IFluentHttpClientBuilder httpClientBuilder)

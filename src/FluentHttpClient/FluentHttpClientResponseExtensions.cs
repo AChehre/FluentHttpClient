@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace FluentHttpClient
 {
@@ -8,8 +9,27 @@ namespace FluentHttpClient
     {
         public static async Task<T> As<T>(this FluentHttpClientResponse response)
         {
-            return await response.Message.Content.ReadAsAsync<T>().ConfigureAwait(false);
+            var streamContent = await response.Message.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            return DeserializeJsonFromStream<T>(streamContent);
         }
+
+
+        private static T DeserializeJsonFromStream<T>(Stream stream)
+        {
+            if (stream == null || stream.CanRead == false)
+            {
+                return default(T);
+            }
+
+            using (var sr = new StreamReader(stream))
+            using (var jtr = new JsonTextReader(sr))
+            {
+                var js = new JsonSerializer();
+                var searchResult = js.Deserialize<T>(jtr);
+                return searchResult;
+            }
+        }
+
 
         public static async Task<string> AsString(this FluentHttpClientResponse response)
         {

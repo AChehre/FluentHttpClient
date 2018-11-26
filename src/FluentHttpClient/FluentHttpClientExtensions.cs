@@ -16,7 +16,7 @@ namespace FluentHttpClient
             MediaTypeHeaderValue contentType = null)
         {
             var request = fluentHttpClient.CreateNewRequest().AsPost().WithUri(uri)
-                .WithBody(body, contentType).Build();
+                .WithBody(body).Build();
             var response = await fluentHttpClient.SendAsync<T>(request);
             return response.Content;
         }
@@ -25,7 +25,7 @@ namespace FluentHttpClient
             MediaTypeHeaderValue contentType = null)
         {
             var request = fluentHttpClient.CreateNewRequest().AsPut().WithUri(uri)
-                .WithBody(body, contentType).Build();
+                .WithBody(body).Build();
             var response = await fluentHttpClient.SendAsync<T>(request);
             return response.Content;
         }
@@ -35,7 +35,7 @@ namespace FluentHttpClient
             MediaTypeHeaderValue contentType = null)
         {
             var request = fluentHttpClient.CreateNewRequest().AsDelete().WithUri(uri)
-                .WithBody(body, contentType).Build();
+                .WithBody(body).Build();
             var response = await fluentHttpClient.SendAsync<T>(request);
             return response.Content;
         }
@@ -45,7 +45,7 @@ namespace FluentHttpClient
             MediaTypeHeaderValue contentType = null)
         {
             var request = fluentHttpClient.CreateNewRequest().AsPatch().WithUri(uri)
-                .WithBody(body, contentType).Build();
+                .WithBody(body).Build();
             var response = await fluentHttpClient.SendAsync<T>(request);
             return response.Content;
         }
