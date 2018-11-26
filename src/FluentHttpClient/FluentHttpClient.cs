@@ -153,6 +153,7 @@ namespace FluentHttpClient
 
             public FluentHttpClientBuilder AddAcceptHeader(string value)
             {
+                if(_acceptHeaders.All(a => a.ToLower() != value.ToLower())) 
                 _acceptHeaders.Add(value);
                 return this;
             }
@@ -169,11 +170,6 @@ namespace FluentHttpClient
                 return this;
             }
 
-
-            public FluentHttpClientBuilder AddApplicationJsonHeader()
-            {
-                return AddAcceptHeader(MimeTypes.Application.Json);
-            }
 
 
             public FluentHttpClientBuilder WithBaseUrl(string baseUrl)
@@ -203,6 +199,11 @@ namespace FluentHttpClient
                 return this;
             }
 
+            public FluentHttpClientBuilder WithJsonDefaultRequestHeaders()
+            {
+                return AddAcceptHeader(MimeTypes.Application.Json);
+            }
+
 
             public FluentHttpClientBuilder WithHttpMessageHandler(HttpMessageHandler handler)
             {
@@ -218,6 +219,7 @@ namespace FluentHttpClient
                     _baseUrl = new Uri("");
                 }
 
+              
 
                 var fluentHttpClient = new FluentHttpClient(this)
                 {
@@ -225,7 +227,7 @@ namespace FluentHttpClient
                 };
 
 
-                _defaultRequestHeaders?.Invoke(fluentHttpClient.RawHttpClient.DefaultRequestHeaders);
+              
 
 
                 if (_middlewares == null || !_middlewares.Any())
@@ -286,6 +288,9 @@ namespace FluentHttpClient
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptHeader));
                 }
 
+                
+
+                    httpClientBuilder.DefaultRequestHeaders?.Invoke(httpClient.DefaultRequestHeaders);
 
                 return httpClient;
             }
