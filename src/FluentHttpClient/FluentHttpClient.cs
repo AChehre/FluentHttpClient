@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentHttpClient.Client;
 using Newtonsoft.Json;
 
 namespace FluentHttpClient
@@ -199,11 +200,7 @@ namespace FluentHttpClient
                 return this;
             }
 
-            public FluentHttpClientBuilder WithJsonDefaultRequestHeaders()
-            {
-                return AddAcceptHeader(MimeTypes.Application.Json);
-            }
-
+          
 
             public FluentHttpClientBuilder WithHttpMessageHandler(HttpMessageHandler handler)
             {

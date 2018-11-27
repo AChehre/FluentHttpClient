@@ -11,7 +11,6 @@ namespace FluentHttpClient
             return FluentHttpClientRequest.CreateNewRequest(fluentHttpClient);
         }
 
-
         public static async Task<T> PostAsync<T>(this FluentHttpClient fluentHttpClient, string uri, object body,
             MediaTypeHeaderValue contentType = null)
         {

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FluentHttpClient;
+using FluentHttpClient.Client;
 using Moq;
 using Xunit;
 
@@ -44,5 +45,20 @@ namespace FluentHttpClientTests
             Assert.Equal(stringContent, content);
         }
 
+
+        [Fact]
+        public void SetBearerToken_RawClient_should_have_bearer_key()
+        {
+            const string token = "my token";
+            const string baseUrl = "http://chehre.net/api/";
+
+            var client = FluentHttpClient.FluentHttpClient.NewFluentHttpClient().ConfigDefaultRequestHeaders(
+                    defaultRequestHeaders => { defaultRequestHeaders.SetBearerToken(token); })
+                .WithBaseUrl(baseUrl).Build();
+
+
+            Assert.Equal("Bearer".ToLower(), client.RawHttpClient.DefaultRequestHeaders.Authorization.Scheme.ToLower());
+            Assert.Equal(token, client.RawHttpClient.DefaultRequestHeaders.Authorization.Parameter.ToLower());
+        }
     }
 }
